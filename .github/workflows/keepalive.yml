@@ -5,7 +5,7 @@ name: Keep zenporcelainbd.com awake
 
 on:
   schedule:
-    - cron: "*/5 * * * *"   # the ping
+    - cron: "2-59/5 * * * *"   # the ping, every 5 minutes, off the busy top-of-hour minute
     - cron: "17 3 * * 1"    # weekly: stop GitHub pausing this schedule after 60 days without commits
   workflow_dispatch:
 
