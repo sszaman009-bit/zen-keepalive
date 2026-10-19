@@ -1,0 +1,37 @@
+# Keeps zenporcelainbd.com awake: Hostinger puts the Node app to sleep when it is idle, and the first visitor after a quiet spell
+# (or right after a deploy) then waits up to ~20 s. A request every 5 minutes keeps it warm. Public repo = free Actions minutes.
+# GitHub may delay scheduled runs a few minutes under load; that is fine for this purpose.
+name: Keep zenporcelainbd.com awake
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"   # the ping
+    - cron: "17 3 * * 1"    # weekly: stop GitHub pausing this schedule after 60 days without commits
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  ping:
+    if: github.event.schedule != '17 3 * * 1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Ping the health check, the homepage and the Sea Green page
+        run: |
+          for path in /api/health / /products/sea-green; do
+            curl -sS -o /dev/null --max-time 60 -A "ZenKeepAlive/1.0 (+https://github.com/${{ github.repository }})" \
+              -w "$path  HTTP %{http_code}  %{time_total}s\n" "https://zenporcelainbd.com$path" || echo "$path  request failed"
+          done
+
+  keep-schedule-enabled:
+    if: github.event.schedule == '17 3 * * 1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Re-enable this workflow (resets GitHub's 60-day inactivity timer)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/keepalive.yml/enable"
